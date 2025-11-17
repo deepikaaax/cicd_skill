@@ -3,11 +3,11 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = 'dockerhub-cred'
-        IMAGE_NAME = 'your-dockerhub-user/my-demo-app'
-        IMAGE_TAG  = 'latest'
+        DOCKER_IMAGE = "deepikaaax/my-demo-app"
     }
 
     stages {
+
         stage('Checkout Source') {
             steps {
                 checkout scm
@@ -16,38 +16,36 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
-                }
+                bat """
+                docker build -t %DOCKER_IMAGE% .
+                """
             }
         }
 
         stage('DockerHub Login') {
             steps {
-                script {
-                    withCredentials([usernamePassword(
-                        credentialsId: DOCKERHUB_CREDENTIALS,
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )]) {
-                        sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
-                    }
+                withCredentials([usernamePassword(credentialsId: env.DOCKERHUB_CREDENTIALS,
+                                                 usernameVariable: 'USER',
+                                                 passwordVariable: 'PASS')]) {
+                    bat """
+                    docker login -u %USER% -p %PASS%
+                    """
                 }
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                script {
-                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
-                }
+                bat """
+                docker push %DOCKER_IMAGE%
+                """
             }
         }
     }
 
     post {
         always {
-            script { sh "docker logout || true" }
+            echo "Pipeline completed."
         }
     }
 }
